@@ -115,5 +115,21 @@ func (pr *PaymentRepository) Create(ctx context.Context, tx *gorm.DB, req *dto.P
 	return &payment, nil
 }
 
-func (pr *PaymentRepository) Update(context.Context, *gorm.DB, string, *dto.UpdatePaymentRequest) (*models.Payment, error) {
+func (pr *PaymentRepository) Update(ctx context.Context, tx *gorm.DB, order_id string, req *dto.UpdatePaymentRequest) (*models.Payment, error) {
+	payment := models.Payment{
+		Status:        &req.Status,
+		TransactionID: req.TransactionID,
+		InvoiceLink:   req.InvoiceLink,
+		PaidAt:        req.PaidAt,
+		VANumber:      req.VANumber,
+		Bank:          req.Bank,
+		Acquirer:      req.Acquirer,
+	}
+
+	err := tx.WithContext(ctx).Where("order_id", order_id).Updates(&payment).Error
+	if err != nil {
+		return nil, errWrap.WrapError(errConstants.ErrSQLError)
+	}
+
+	return &payment, nil
 }
