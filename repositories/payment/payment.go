@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	errWrap "payment-service/common/error"
+	"payment-service/constants"
 	errConstants "payment-service/constants/error"
 	errPayment "payment-service/constants/error/payment"
 	"payment-service/domain/dto"
 	"payment-service/domain/models"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -92,7 +94,25 @@ func (pr *PaymentRepository) FindByOrderID(ctx context.Context, orderID string) 
 	return &payment, nil
 }
 
-func (pr *PaymentRepository) Create(context.Context, *gorm.DB, *dto.PaymentRequest) (*models.Payment, error) {
+func (pr *PaymentRepository) Create(ctx context.Context, tx *gorm.DB, req *dto.PaymentRequest) (*models.Payment, error) {
+	status := constants.Initial
+	orderID := uuid.MustParse(req.OrderID)
+	payment := models.Payment{
+		UUID:        uuid.New(),
+		OrderID:     orderID,
+		Amount:      req.Amount,
+		PaymentLink: req.PaymentLink,
+		ExpiredAt:   req.ExpiredAt,
+		Description: req.Description,
+		Status:      &status,
+	}
+
+	err := tx.WithContext(ctx).Create(&payment).Error
+	if err != nil {
+		return nil, errWrap.WrapError(errConstants.ErrSQLError)
+	}
+
+	return &payment, nil
 }
 
 func (pr *PaymentRepository) Update(context.Context, *gorm.DB, string, *dto.UpdatePaymentRequest) (*models.Payment, error) {
