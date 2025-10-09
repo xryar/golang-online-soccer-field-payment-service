@@ -2,9 +2,11 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	errWrap "payment-service/common/error"
 	errConstants "payment-service/constants/error"
+	errPayment "payment-service/constants/error/payment"
 	"payment-service/domain/dto"
 	"payment-service/domain/models"
 
@@ -64,7 +66,17 @@ func (pr *PaymentRepository) FindAllWithPagination(ctx context.Context, param *d
 	return payments, total, nil
 }
 
-func (pr *PaymentRepository) FindByUUID(context.Context, string) (*models.Payment, error) {
+func (pr *PaymentRepository) FindByUUID(ctx context.Context, uuid string) (*models.Payment, error) {
+	var payment models.Payment
+	err := pr.db.WithContext(ctx).Where("uuid = ?", uuid).First(&payment).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errWrap.WrapError(errPayment.ErrPaymentNotFound)
+		}
+		return nil, errWrap.WrapError(errConstants.ErrSQLError)
+	}
+
+	return &payment, nil
 }
 
 func (pr *PaymentRepository) FindByOrderID(context.Context, string) (*models.Payment, error) {
