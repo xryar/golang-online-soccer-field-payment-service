@@ -79,7 +79,17 @@ func (pr *PaymentRepository) FindByUUID(ctx context.Context, uuid string) (*mode
 	return &payment, nil
 }
 
-func (pr *PaymentRepository) FindByOrderID(context.Context, string) (*models.Payment, error) {
+func (pr *PaymentRepository) FindByOrderID(ctx context.Context, orderID string) (*models.Payment, error) {
+	var payment models.Payment
+	err := pr.db.WithContext(ctx).Where("order_id = ?", orderID).First(&payment).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errWrap.WrapError(errPayment.ErrPaymentNotFound)
+		}
+		return nil, errWrap.WrapError(errConstants.ErrSQLError)
+	}
+
+	return &payment, nil
 }
 
 func (pr *PaymentRepository) Create(context.Context, *gorm.DB, *dto.PaymentRequest) (*models.Payment, error) {
