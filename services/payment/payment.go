@@ -2,7 +2,13 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"math/rand"
+	"os"
 	clients "payment-service/clients/midtrans"
+	"strings"
 
 	"payment-service/common/gcs"
 	"payment-service/common/util"
@@ -153,3 +159,65 @@ func (ps *PaymentService) Create(ctx context.Context, req *dto.PaymentRequest) (
 }
 
 func (ps *PaymentService) Webhook(ctx context.Context, webhook *dto.Webhook) error {}
+
+func (ps *PaymentService) convertToIndonesiaMonth(englishMonth string) string {
+	monthMap := map[string]string{
+		"January":   "Januari",
+		"February":  "Februari",
+		"March":     "Maret",
+		"April":     "April",
+		"May":       "Mei",
+		"June":      "Juni",
+		"July":      "Juli",
+		"August":    "Agustus",
+		"September": "September",
+		"October":   "Oktober",
+		"November":  "November",
+		"Descember": "Desember",
+	}
+	indonesianMonth, ok := monthMap[englishMonth]
+	if !ok {
+		return errors.New("month not found").Error()
+	}
+
+	return indonesianMonth
+}
+
+func (ps *PaymentService) generatePDF(req *dto.InvoiceRequest) ([]byte, error) {
+	htmlTemplatePath := "template/invoice.html"
+	htmlTemplate, err := os.ReadFile(htmlTemplatePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+	jsonData, _ := json.Marshal(req)
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	pdf, err := util.GeneratePDFFromHTML(string(htmlTemplate), data)
+	if err != nil {
+		return nil, err
+	}
+
+	return pdf, nil
+}
+
+func (ps *PaymentService) UploadToGCS(ctx context.Context, invoiceNumber string, pdf []byte) (string, error) {
+	invoiceNumberReplace := strings.ToLower(strings.ReplaceAll(invoiceNumber, "/", "-"))
+	filename := fmt.Sprintf("%s.pdf", invoiceNumberReplace)
+	url, err := ps.gcs.UploadFile(ctx, filename, pdf)
+	if err != nil {
+		return "", err
+	}
+
+	return url, nil
+}
+
+func (ps *PaymentService) randomInt() int {
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	number := random.Intn(900000 + 100000)
+	return number
+}
