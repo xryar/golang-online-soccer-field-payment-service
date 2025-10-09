@@ -34,9 +34,64 @@ func NewPaymentService(repository repositories.IRegistryRepository, gcs gcs.IGCS
 }
 
 func (ps *PaymentService) GetAllWithPagination(ctx context.Context, param *dto.PaymentRequestParam) (*util.PaginationResult, error) {
+	payments, total, err := ps.repository.GetPayment().FindAllWithPagination(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	paymentResult := make([]dto.PaymentResponse, 0, len(payments))
+	for _, payment := range payments {
+		paymentResult = append(paymentResult, dto.PaymentResponse{
+			UUID:          payment.UUID,
+			TransactionID: payment.TransactionID,
+			OrderID:       payment.OrderID,
+			Amount:        payment.Amount,
+			Status:        payment.Status.GetStatusString(),
+			PaymentLink:   payment.PaymentLink,
+			InvoiceLink:   payment.InvoiceLink,
+			VANumber:      payment.VANumber,
+			Bank:          payment.Bank,
+			Description:   payment.Description,
+			ExpiredAt:     payment.ExpiredAt,
+			CreatedAt:     payment.CreatedAt,
+			UpdatedAt:     payment.UpdatedAt,
+		})
+	}
+
+	paginationParam := util.PaginationParam{
+		Page:  param.Page,
+		Limit: param.Limit,
+		Count: total,
+		Data:  paymentResult,
+	}
+
+	response := util.GeneratePagination(paginationParam)
+
+	return &response, nil
 }
 
-func (ps *PaymentService) GetByUUID(ctx context.Context, uuid string) (*dto.PaymentResponse, error) {}
+func (ps *PaymentService) GetByUUID(ctx context.Context, uuid string) (*dto.PaymentResponse, error) {
+	payment, err := ps.repository.GetPayment().FindByUUID(ctx, uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.PaymentResponse{
+		UUID:          payment.UUID,
+		TransactionID: payment.TransactionID,
+		OrderID:       payment.OrderID,
+		Amount:        payment.Amount,
+		Status:        payment.Status.GetStatusString(),
+		PaymentLink:   payment.PaymentLink,
+		InvoiceLink:   payment.InvoiceLink,
+		VANumber:      payment.VANumber,
+		Bank:          payment.Bank,
+		Description:   payment.Description,
+		ExpiredAt:     payment.ExpiredAt,
+		CreatedAt:     payment.CreatedAt,
+		UpdatedAt:     payment.UpdatedAt,
+	}, nil
+}
 
 func (ps *PaymentService) Create(ctx context.Context, req *dto.PaymentRequest) (*dto.PaymentResponse, error) {
 }
