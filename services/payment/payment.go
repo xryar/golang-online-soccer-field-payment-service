@@ -160,7 +160,7 @@ func (ps *PaymentService) Create(ctx context.Context, req *dto.PaymentRequest) (
 	return response, nil
 }
 
-func (ps *PaymentService) Webhook(ctx context.Context, webhook *dto.Webhook) error {
+func (ps *PaymentService) Webhook(ctx context.Context, req *dto.Webhook) error {
 	var (
 		txErr, err         error
 		paymentAfterUpdate *models.Payment
@@ -170,8 +170,91 @@ func (ps *PaymentService) Webhook(ctx context.Context, webhook *dto.Webhook) err
 	)
 
 	err = ps.repository.GetTx().Transaction(func(tx *gorm.DB) error {
+		_, txErr = ps.repository.GetPayment().FindByOrderID(ctx, req.OrderID.String())
+		if txErr != nil {
+			return txErr
+		}
 
+		if req.TransactionStatus == constants.SettlementString {
+			now := time.Now()
+			paidAt = &now
+		}
+
+		status := req.TransactionStatus.GetStatusInt()
+		vaNumber := req.VANumbers[0].VaNumber
+		bank := req.VANumbers[0].Bank
+		paymentAfterUpdate, txErr = ps.repository.GetPayment().Update(ctx, tx, req.OrderID.String(), &dto.UpdatePaymentRequest{
+			TransactionID: &req.TransactionID,
+			Status:        &status,
+			PaidAt:        paidAt,
+			VANumber:      &vaNumber,
+			Bank:          &bank,
+			Acquirer:      req.Acquirer,
+		})
+		if txErr != nil {
+			return txErr
+		}
+
+		ps.repository.GetPaymentHistory().Create(ctx, tx, &dto.PaymentHistoryRequest{
+			PaymentID: paymentAfterUpdate.ID,
+			Status:    paymentAfterUpdate.Status.GetStatusString(),
+		})
+
+		if req.TransactionStatus == constants.SettlementString {
+			paidDay := paidAt.Format("02")
+			paidMonth := ps.convertToIndonesiaMonth(paidAt.Format("January"))
+			paidYear := paidAt.Format("2006")
+			invoiceNumber := fmt.Sprintf("INV/%s/ORD/%d", time.Now().Format(time.DateOnly), ps.randomNumber())
+			total := util.RupiahFormat(&paymentAfterUpdate.Amount)
+			invoiceRequest := &dto.InvoiceRequest{
+				InvoiceNumber: invoiceNumber,
+				Data: dto.InvoiceData{
+					PaymentDetail: dto.InvoicePaymentDetail{
+						PaymentMethod: req.PaymentType,
+						BankName:      strings.ToUpper(*paymentAfterUpdate.Bank),
+						VANumber:      *paymentAfterUpdate.VANumber,
+						Date:          fmt.Sprintf("%s %s %s", paidDay, paidMonth, paidYear),
+						IsPaid:        true,
+					},
+					Items: []dto.InvoiceItem{
+						{
+							Description: *paymentAfterUpdate.Description,
+							Price:       total,
+						},
+					},
+					Total: total,
+				},
+			}
+			pdf, txErr = ps.generatePDF(invoiceRequest)
+			if txErr != nil {
+				return txErr
+			}
+
+			invoiceLink, txErr = ps.UploadToGCS(ctx, invoiceNumber, pdf)
+			if txErr != nil {
+				return txErr
+			}
+
+			_, txErr = ps.repository.GetPayment().Update(ctx, tx, req.OrderID.String(), &dto.UpdatePaymentRequest{
+				InvoiceLink: &invoiceLink,
+			})
+			if txErr != nil {
+				return txErr
+			}
+		}
+
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	err = ps.produceToKafka(req, paymentAfterUpdate, paidAt)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (ps *PaymentService) convertToIndonesiaMonth(englishMonth string) string {
@@ -230,7 +313,7 @@ func (ps *PaymentService) UploadToGCS(ctx context.Context, invoiceNumber string,
 	return url, nil
 }
 
-func (ps *PaymentService) randomInt() int {
+func (ps *PaymentService) randomNumber() int {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	number := random.Intn(900000 + 100000)
 	return number
@@ -250,7 +333,7 @@ func (ps *PaymentService) mapTransactionStatusToEvent(status constants.PaymentSt
 	return paymentStatus
 }
 
-func (ps *PaymentService) produceToKafka(req dto.Webhook, payment *models.Payment, paidAt *time.Time) error {
+func (ps *PaymentService) produceToKafka(req *dto.Webhook, payment *models.Payment, paidAt *time.Time) error {
 	event := dto.KafkaEvent{
 		Name: ps.mapTransactionStatusToEvent(req.TransactionStatus),
 	}

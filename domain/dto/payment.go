@@ -38,13 +38,13 @@ type PaymentRequestParam struct {
 }
 
 type UpdatePaymentRequest struct {
-	TransactionID *string                 `json:"transactionID"`
-	Status        constants.PaymentStatus `json:"status"`
-	PaidAt        *time.Time              `json:"paidAt"`
-	VANumber      *string                 `json:"vaNumber"`
-	Bank          *string                 `json:"bank"`
-	InvoiceLink   *string                 `json:"invoiceLink,omitempty"`
-	Acquirer      *string                 `json:"acquirer"`
+	TransactionID *string                  `json:"transactionID"`
+	Status        *constants.PaymentStatus `json:"status"`
+	PaidAt        *time.Time               `json:"paidAt"`
+	VANumber      *string                  `json:"vaNumber"`
+	Bank          *string                  `json:"bank"`
+	InvoiceLink   *string                  `json:"invoiceLink,omitempty"`
+	Acquirer      *string                  `json:"acquirer"`
 }
 
 type PaymentResponse struct {
