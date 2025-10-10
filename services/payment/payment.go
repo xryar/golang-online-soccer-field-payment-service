@@ -160,7 +160,19 @@ func (ps *PaymentService) Create(ctx context.Context, req *dto.PaymentRequest) (
 	return response, nil
 }
 
-func (ps *PaymentService) Webhook(ctx context.Context, webhook *dto.Webhook) error {}
+func (ps *PaymentService) Webhook(ctx context.Context, webhook *dto.Webhook) error {
+	var (
+		txErr, err         error
+		paymentAfterUpdate *models.Payment
+		paidAt             *time.Time
+		invoiceLink        string
+		pdf                []byte
+	)
+
+	err = ps.repository.GetTx().Transaction(func(tx *gorm.DB) error {
+
+	})
+}
 
 func (ps *PaymentService) convertToIndonesiaMonth(englishMonth string) string {
 	monthMap := map[string]string{
