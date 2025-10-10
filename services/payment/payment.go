@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"os"
 	clients "payment-service/clients/midtrans"
+	"payment-service/config"
+	"payment-service/constants"
 	"strings"
 
 	"payment-service/common/gcs"
@@ -220,4 +222,54 @@ func (ps *PaymentService) randomInt() int {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	number := random.Intn(900000 + 100000)
 	return number
+}
+
+func (ps *PaymentService) mapTransactionStatusToEvent(status constants.PaymentStatusString) string {
+	var paymentStatus string
+	switch status {
+	case constants.PendingString:
+		paymentStatus = strings.ToUpper(constants.PendingString.String())
+	case constants.SettlementString:
+		paymentStatus = strings.ToUpper(constants.SettlementString.String())
+	case constants.ExpireString:
+		paymentStatus = strings.ToUpper(constants.ExpireString.String())
+	}
+
+	return paymentStatus
+}
+
+func (ps *PaymentService) produceToKafka(req dto.Webhook, payment *models.Payment, paidAt *time.Time) error {
+	event := dto.KafkaEvent{
+		Name: ps.mapTransactionStatusToEvent(req.TransactionStatus),
+	}
+
+	metadata := dto.KafkaMetaData{
+		Sender:    "payment-service",
+		SendingAt: time.Now().Format(time.RFC3339),
+	}
+
+	body := dto.KafkaBody{
+		Type: "JSON",
+		Data: &dto.KafkaData{
+			OrderID:   payment.OrderID,
+			PaymentID: payment.UUID,
+			Status:    req.TransactionStatus.String(),
+			PaidAt:    paidAt,
+		},
+	}
+
+	kafkaMessage := dto.KafkaMessage{
+		Event:    event,
+		Metadata: metadata,
+		Body:     body,
+	}
+
+	topic := config.Config.Kafka.Topic
+	kafkaMessageJSON, _ := json.Marshal(kafkaMessage)
+	err := ps.kafka.GetKafkaProducer().ProduceMessage(topic, kafkaMessageJSON)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
