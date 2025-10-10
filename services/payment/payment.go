@@ -132,7 +132,7 @@ func (ps *PaymentService) Create(ctx context.Context, req *dto.PaymentRequest) (
 			ExpiredAt:   req.ExpiredAt,
 			PaymentLink: midtrans.RedirectURL,
 		}
-		payment, txErr := ps.repository.GetPayment().Create(ctx, tx, paymentRequest)
+		payment, txErr = ps.repository.GetPayment().Create(ctx, tx, paymentRequest)
 		if txErr != nil {
 			return txErr
 		}
