@@ -19,7 +19,7 @@ type IRegistryService interface {
 	GetPayment() services.IPaymentService
 }
 
-func NewRegistry(repository repositories.IRegistryRepository, gcs gcs.IGCSClient, kafka kafka.IKafkaRegistry, midtrans clients.IMidtransClient) IRegistryService {
+func NewRegistryService(repository repositories.IRegistryRepository, gcs gcs.IGCSClient, kafka kafka.IKafkaRegistry, midtrans clients.IMidtransClient) IRegistryService {
 	return &Registry{
 		repository: repository,
 		gcs:        gcs,
