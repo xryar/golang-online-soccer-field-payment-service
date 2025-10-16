@@ -68,10 +68,10 @@ func (mc *MidtransClient) CreatePaymentLink(request *dto.PaymentRequest) (*Midtr
 		},
 		Items: &[]midtrans.ItemDetails{
 			{
-				ID:    request.ItemDetail[0].ID,
-				Price: int64(request.ItemDetail[0].Amount),
-				Qty:   int32(request.ItemDetail[0].Quantity),
-				Name:  request.ItemDetail[0].Name,
+				ID:    request.ItemDetails[0].ID,
+				Price: int64(request.ItemDetails[0].Amount),
+				Qty:   int32(request.ItemDetails[0].Quantity),
+				Name:  request.ItemDetails[0].Name,
 			},
 		},
 		Expiry: &snap.ExpiryDetails{
