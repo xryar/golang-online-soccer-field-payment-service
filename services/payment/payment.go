@@ -355,6 +355,7 @@ func (ps *PaymentService) produceToKafka(req *dto.Webhook, payment *models.Payme
 			PaymentID: payment.UUID,
 			Status:    req.TransactionStatus.String(),
 			PaidAt:    paidAt,
+			ExpiredAt: *payment.ExpiredAt,
 		},
 	}
 

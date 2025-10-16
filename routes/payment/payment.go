@@ -35,7 +35,7 @@ func (pr *PaymentRoute) Run() {
 		constants.Admin,
 		constants.Customer,
 	}, pr.client), pr.controller.GetPayment().GetAllWithPagination)
-	group.GET("/:id", middlewares.CheckRole([]string{
+	group.GET("/uuid", middlewares.CheckRole([]string{
 		constants.Admin,
 		constants.Customer,
 	}, pr.client), pr.controller.GetPayment().GetByUUID)
