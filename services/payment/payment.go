@@ -183,7 +183,7 @@ func (ps *PaymentService) Webhook(ctx context.Context, req *dto.Webhook) error {
 		status := req.TransactionStatus.GetStatusInt()
 		vaNumber := req.VANumbers[0].VaNumber
 		bank := req.VANumbers[0].Bank
-		paymentAfterUpdate, txErr = ps.repository.GetPayment().Update(ctx, tx, req.OrderID.String(), &dto.UpdatePaymentRequest{
+		_, txErr = ps.repository.GetPayment().Update(ctx, tx, req.OrderID.String(), &dto.UpdatePaymentRequest{
 			TransactionID: &req.TransactionID,
 			Status:        &status,
 			PaidAt:        paidAt,
@@ -195,7 +195,12 @@ func (ps *PaymentService) Webhook(ctx context.Context, req *dto.Webhook) error {
 			return txErr
 		}
 
-		ps.repository.GetPaymentHistory().Create(ctx, tx, &dto.PaymentHistoryRequest{
+		paymentAfterUpdate, txErr = ps.repository.GetPayment().FindByOrderID(ctx, req.OrderID.String())
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = ps.repository.GetPaymentHistory().Create(ctx, tx, &dto.PaymentHistoryRequest{
 			PaymentID: paymentAfterUpdate.ID,
 			Status:    paymentAfterUpdate.Status.GetStatusString(),
 		})

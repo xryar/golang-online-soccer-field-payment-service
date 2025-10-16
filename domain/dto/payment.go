@@ -14,7 +14,7 @@ type PaymentRequest struct {
 	Amount         float64         `json:"amount"`
 	Description    *string         `json:"description"`
 	CustomerDetail *CustomerDetail `json:"customerDetail"`
-	ItemDetail     []ItemDetail    `json:"itemDetail"`
+	ItemDetails    []ItemDetail    `json:"itemDetails"`
 }
 
 type CustomerDetail struct {
@@ -54,12 +54,12 @@ type PaymentResponse struct {
 	Status        constants.PaymentStatusString `json:"status"`
 	PaymentLink   string                        `json:"paymentLink"`
 	InvoiceLink   *string                       `json:"invoiceLink,omitempty"`
-	TransactionID *string                       `json:"transactionID"`
-	VANumber      *string                       `json:"vaNumber"`
-	Bank          *string                       `json:"bank"`
-	Acquirer      *string                       `json:"acquirer"`
+	TransactionID *string                       `json:"transactionID,omitempty"`
+	VANumber      *string                       `json:"vaNumber,omitempty"`
+	Bank          *string                       `json:"bank,omitempty"`
+	Acquirer      *string                       `json:"acquirer,omitempty"`
 	Description   *string                       `json:"description"`
-	PaidAt        *time.Time                    `json:"paidAt"`
+	PaidAt        *time.Time                    `json:"paidAt,omitempty"`
 	ExpiredAt     *time.Time                    `json:"expiredAt"`
 	CreatedAt     *time.Time                    `json:"createdAt"`
 	UpdatedAt     *time.Time                    `json:"updatedAt"`
@@ -78,7 +78,7 @@ type Webhook struct {
 	PaymentAmount     []PaymentAmount               `json:"payment_amount"`
 	OrderID           uuid.UUID                     `json:"order_id"`
 	MerchantID        string                        `json:"merchant_id"`
-	GrossAmount       float64                       `json:"gross_amount"`
+	GrossAmount       string                        `json:"gross_amount"`
 	FraudStatus       string                        `json:"fraud_status"`
 	Currency          string                        `json:"currency"`
 	Acquirer          *string                       `json:"acquirer"`
