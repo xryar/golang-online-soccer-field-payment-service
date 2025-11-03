@@ -2,7 +2,7 @@
 
 <h3>Description</h3>
 
-<p>This repository will be used to manage paymente</p>
+<p>This repository will be used to manage payment</p>
 
 <h3>Directory Structure</h3>
 
